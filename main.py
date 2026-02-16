@@ -149,4 +149,4 @@ def update_dashboard(cliente_seleccionado):
 
 if __name__ == '__main__':
     # Para la nube, host debe ser 0.0.0.0 y debug debe ser False
-    app.run(host='0.0.0.0', port=8080, debug=False)
+    app.run(host='0.0.0.0', debug=False)
