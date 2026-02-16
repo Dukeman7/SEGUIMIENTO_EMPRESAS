@@ -1,0 +1,13 @@
+id,cliente,obligacion,peso,responsable,estatus,vencimiento
+1,FTTH,Pago de Tributos IV-2025,4,Cliente,NO,2026-04-15
+2,FTTH,Modelo Contrato (Res 1338),4,Duque,SI,2026-12-31
+3,FTTH,Res. 508 (Zonas Sensibles),2,Duque,NO,2026-03-30
+4,RADNET,Ubicacion de Nodos,4,Cliente,SI,2026-12-31
+5,RADNET,Migracion IPv6 (Obligatoria),1,Cliente,NO,2026-06-16
+6,RADNET,CCOM - Reporte Reclamos,2,Duque,SI,2026-03-05
+7,WELLCOMM-A,Tributos IV-2025,4,Cliente,NO,2026-04-15
+8,WELLCOMM-A,Publicacion Precios Max,2,Cliente,SI,2026-02-28
+9,WELLCOMM-B,Tributos IV-2025,4,Cliente,NO,2026-04-15
+10,ALEPH,Homologacion CPEs,1,Cliente,SI,2026-05-20
+11,TCA,Servicio Social (Escuelas),1,Duque,NO,2026-03-15
+12,DATANET,Control de Pagos Asesoria,4,Cliente,NO,2026-02-15
