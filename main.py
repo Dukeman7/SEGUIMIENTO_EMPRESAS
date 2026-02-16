@@ -140,5 +140,4 @@ def update_dashboard(cliente_seleccionado):
     return opciones, cliente_seleccionado, fig, dff.to_dict('records')
 
 if __name__ == '__main__':
-    # Acceso por http://127.0.0.1:8050
-    app.run_server(debug=True)
+    app.run(debug=True)
