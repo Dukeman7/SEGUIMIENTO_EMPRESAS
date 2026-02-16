@@ -1,4 +1,5 @@
 import dash
+server = app.server 
 from dash import dcc, html, dash_table, Input, Output
 import pandas as pd
 import plotly.graph_objects as go
@@ -140,4 +141,5 @@ def update_dashboard(cliente_seleccionado):
     return opciones, cliente_seleccionado, fig, dff.to_dict('records')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Para la nube, host debe ser 0.0.0.0 y debug debe ser False
+    app.run(host='0.0.0.0', port=8080, debug=False)
