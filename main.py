@@ -116,5 +116,6 @@ def update_dashboard(cliente_seleccionado):
 
 # 5. LANZAMIENTO (Modo Nube)
 if __name__ == '__main__':
-    # Usamos host='0.0.0.0' para que sea visible en la web
-    app.run(debug=False)
+    # Usamos el puerto que la nube nos asigne, o el 8050 por defecto
+    port = int(os.environ.get("PORT", 8050))
+    app.run(host='0.0.0.0', port=port, debug=False)
