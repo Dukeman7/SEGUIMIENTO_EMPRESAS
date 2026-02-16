@@ -117,4 +117,4 @@ def update_dashboard(cliente_seleccionado):
 # 5. LANZAMIENTO (Modo Nube)
 if __name__ == '__main__':
     # Usamos host='0.0.0.0' para que sea visible en la web
-    app.run(host='0.0.0.0', debug=False)
+    app.run(debug=False)
