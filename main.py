@@ -1,8 +1,15 @@
 import dash
-server = app.server 
 from dash import dcc, html, dash_table, Input, Output
 import pandas as pd
 import plotly.graph_objects as go
+import os
+
+# 1. Creando la APP 
+# Se usa __name__ (con doble guion bajo al principio y al final)
+app = dash.Dash(__name__)
+
+# 2. SERVER (Ahora sí sabe qué es 'app')
+server = app.server
 
 # 1. CARGA DE DATOS
 # El sistema lee el archivo que estás creando ahora mismo
