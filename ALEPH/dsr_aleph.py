@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 # Configuración de Marca
-st.image("URL_LOGO_EMPRESA", width=150)
+st.image("URL_LOGO_EMPRESA", width=70)
 st.title("Sistema ALEPH: Control de Obligaciones")
 
 # Simulación de Datos (esto vendrá de tu Google Sheet)
