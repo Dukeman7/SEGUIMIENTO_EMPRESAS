@@ -16,16 +16,15 @@ st.markdown("---")
 # 2. Cargar el archivo manual (con manejo de errores por si cambia de nombre o ubicación)
 @st.cache_data
 def cargar_datos():
-    # Intenta buscar el archivo CSV en la carpeta actual
-    archivo = "homologaciones.csv"
+    # Obtiene la carpeta exacta donde está guardado este archivo app.py
+    carpeta_actual = os.path.dirname(os.path.abspath(__file__))
+    archivo = os.path.join(carpeta_actual, "homologaciones.csv")
+    
     if not os.path.exists(archivo):
         return None
     
-    # Leemos el archivo asegurando que los códigos se traten como texto
     df = pd.read_csv(archivo, dtype=str)
     return df
-
-df = cargar_datos()
 
 # 3. Validación de seguridad (Modo Gumersinda)
 if df is None:
