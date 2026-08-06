@@ -23,8 +23,18 @@ def cargar_datos():
     if not os.path.exists(archivo):
         return None
     
-    df_temporal = pd.read_csv(archivo, dtype=str)
-    return df_temporal
+    # Modo Gumersinda: Lista de todas las codificaciones que usa Excel/Windows/Linux
+    codificaciones = ["utf-8", "utf-8-sig", "latin-1", "cp1252"]
+    
+    for cod in codificaciones:
+        try:
+            df_temporal = pd.read_csv(archivo, dtype=str, encoding=cod)
+            return df_temporal
+        except UnicodeDecodeError:
+            # Si Excel lo guardó en otro formato, salta a la siguiente codificación en milisegundos
+            continue
+            
+    return None
 
 df = cargar_datos()
 
