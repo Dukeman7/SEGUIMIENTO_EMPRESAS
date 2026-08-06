@@ -23,8 +23,15 @@ def cargar_datos():
     if not os.path.exists(archivo):
         return None
     
-    df = pd.read_csv(archivo, dtype=str)
-    return df
+    df_temporal = pd.read_csv(archivo, dtype=str)
+    return df_temporal
+
+df = cargar_datos()
+
+# Validación de seguridad (Modo Gumersinda)
+if df is None:
+    st.error("⚠️ No se encontró el archivo 'homologaciones.csv' en la carpeta. Súbelo al repositorio para activar el radar.")
+    st.stop()
 
 # 3. Validación de seguridad (Modo Gumersinda)
 if df is None:
