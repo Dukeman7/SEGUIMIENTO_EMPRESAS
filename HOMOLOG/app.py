@@ -13,53 +13,58 @@ st.title("📡 Radar de Equipos Homologados - CONATEL (v1.0)")
 st.markdown("Herramienta de consulta y auditoría de homologaciones de telecomunicaciones.")
 st.markdown("---")
 
-# 2. Cargar el archivo manual (con manejo de errores por si cambia de nombre o ubicación)
+# 2. Carga de datos blindada (Compatible con Windows, Linux, UTF-8, Latin-1, Comas y Puntos y Comas)
 @st.cache_data
 def cargar_datos():
-    # Obtiene la carpeta exacta donde está guardado este archivo app.py
     carpeta_actual = os.path.dirname(os.path.abspath(__file__))
     archivo = os.path.join(carpeta_actual, "homologaciones.csv")
     
     if not os.path.exists(archivo):
         return None
     
-    # Modo Gumersinda: Lista de todas las codificaciones que usa Excel/Windows/Linux
+    delimitadores = [",", ";", "\t"]
     codificaciones = ["utf-8", "utf-8-sig", "latin-1", "cp1252"]
     
     for cod in codificaciones:
-        try:
-            df_temporal = pd.read_csv(archivo, dtype=str, encoding=cod)
-            return df_temporal
-        except UnicodeDecodeError:
-            # Si Excel lo guardó en otro formato, salta a la siguiente codificación en milisegundos
-            continue
+        for sep in delimitadores:
+            try:
+                df_temporal = pd.read_csv(
+                    archivo, 
+                    dtype=str, 
+                    encoding=cod, 
+                    sep=sep, 
+                    on_bad_lines="skip"
+                )
+                if len(df_temporal.columns) > 1:
+                    return df_temporal
+            except Exception:
+                continue
             
     return None
 
 df = cargar_datos()
 
-# Validación de seguridad (Modo Gumersinda)
+# 3. Validación de seguridad si falta el archivo
 if df is None:
-    st.error("⚠️ No se encontró el archivo 'homologaciones.csv' en la carpeta. Súbelo al repositorio para activar el radar.")
-    st.stop()
-
-# 3. Validación de seguridad (Modo Gumersinda)
-if df is None:
-    st.error("⚠️ No se encontró el archivo 'homologaciones.csv' en la carpeta. Súbelo al repositorio para activar el radar.")
+    st.error("⚠️ No se pudo leer el archivo 'homologaciones.csv'. Revisa que esté subido correctamente en la carpeta HOMOLOG.")
     st.stop()
 
 # 4. Barra lateral de filtros
 st.sidebar.header("🔍 Filtros de Búsqueda")
 
-# Filtro por Marca (ordenado alfabéticamente)
-marcas_disponibles = sorted(df["Marca"].dropna().unique())
+# Limpieza de espacios en blanco en la columna Marca por si acaso
+if "Marca" in df.columns:
+    df["Marca"] = df["Marca"].str.strip()
+    marcas_disponibles = sorted(df["Marca"].dropna().unique())
+else:
+    marcas_disponibles = []
+
 marcas_seleccionadas = st.sidebar.multiselect(
     "1. Filtrar por Marca(s):",
     options=marcas_disponibles,
     default=[]
 )
 
-# Filtro por texto libre (Modelo o Código de Homologación)
 busqueda_libre = st.sidebar.text_input("2. Buscar Modelo o Código HET/EAT:")
 
 # 5. Aplicar los filtros a la tabla
@@ -69,17 +74,17 @@ if marcas_seleccionadas:
     df_filtrado = df_filtrado[df_filtrado["Marca"].isin(marcas_seleccionadas)]
 
 if busqueda_libre:
-    df_filtrado = df_filtrado[
-        df_filtrado["Modelo"].str.contains(busqueda_libre, case=False, na=False) |
-        df_filtrado["C. Homologación"].str.contains(busqueda_libre, case=False, na=False) |
-        df_filtrado["Código"].str.contains(busqueda_libre, case=False, na=False)
-    ]
+    # Creamos filtros seguros por columnas si existen
+    condicion = False
+    for col in df_filtrado.columns:
+        condicion = condicion | df_filtrado[col].str.contains(busqueda_libre, case=False, na=False)
+    df_filtrado = df_filtrado[condicion]
 
-# 6. Mostrar métricas de control
+# 6. Mostrar métricas de control en pantalla
 col1, col2, col3 = st.columns(3)
 col1.metric("Equipos en Pantalla", f"{len(df_filtrado):,}")
 col2.metric("Total en Base de Datos", f"{len(df):,}")
-col3.metric("Marcas Únicas", f"{df['Marca'].nunique():,}")
+col3.metric("Marcas Únicas", f"{df['Marca'].nunique() if 'Marca' in df.columns else 0:,}")
 
 st.markdown("### 📋 Resultados de la Consulta")
 st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
