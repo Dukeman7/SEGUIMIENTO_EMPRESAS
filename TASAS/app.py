@@ -10,14 +10,24 @@ st.title("📊 Histórico de Tasas BCV")
 # Función para cargar datos desde Google Sheets
 @st.cache_data(ttl=3600)
 def load_data():
-    # NOTA: Para producción, usa un archivo JSON de credenciales de Google Cloud
-    # Aquí asumo acceso público o vía configuración de entorno
     sheet_id = "1_z2yK2pYwYVVhc0DzvgDfap6YEE28A2PP9MwikCRDlE"
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv"
+    # Añadimos sheet=CONSOLIDADO_HISTORICO (o el nombre exacto de tu pestaña en el Google Sheet)
+    # Si quieres una pestaña específica, se usa &sheet=NombreDeLaHoja
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=CONSOLIDADO_HISTORICO"
+    
     df = pd.read_csv(url)
-    # Limpieza básica
+    
+    # Por si acaso las columnas vienen con espacios o nombres raros, 
+    # nos aseguramos mapeando por posición si las dos primeras columnas son Fecha y Tasa:
+    df.columns = [str(col).strip() for col in df.columns]
+    
+    if 'Vigencia' not in df.columns:
+        # Si por alguna razón la columna 0 es la fecha, la renombramos por seguridad
+        df = df.rename(columns={df.columns[0]: 'Vigencia', df.columns[1]: 'Tasa'})
+
     df['Vigencia'] = pd.to_datetime(df['Vigencia'], errors='coerce')
     df['Tasa'] = pd.to_numeric(df['Tasa'], errors='coerce')
+    
     return df.dropna(subset=['Vigencia', 'Tasa'])
 
 df = load_data()
