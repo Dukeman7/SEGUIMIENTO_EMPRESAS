@@ -1,35 +1,44 @@
 import streamlit as st
 import pandas as pd
+import requests
+import io
 from datetime import date
 
 # Configuración de la App
 st.set_page_config(page_title="Dashboard Dólar BCV (2025-2026)", layout="wide")
 st.title("📊 Histórico de Tasas BCV (2025-2026)")
 
-# Función para cargar datos desde el nuevo Google Sheet
+# Función para cargar datos de forma segura usando requests
 @st.cache_data(ttl=3600)
 def load_data():
-    # PEGA AQUÍ LA URL QUE TE DIO "PUBLICAR EN LA WEB"
-    url = "TU_URL_DE_PUBLICACION_A_LA_WEB_AQUI"
+    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQUsGQIAmQ695PmJqoPcBcA78T3TIX-QUEn52lF9jkaY2WFWw8UjWYEZw6mUaJtu2MmxG6q_2vDMG51/pub?gid=0&single=true&output=csv"
     
-    df = pd.read_csv(url)
+    # Descargamos el contenido mediante requests para evitar que pandas confunda la URL con un archivo local
+    response = requests.get(url)
+    response.raise_for_status() # Lanza error si falla la conexión
+    
+    df = pd.read_csv(io.StringIO(response.text))
     
     # Limpieza de nombres de columnas
     df.columns = [str(col).strip() for col in df.columns]
-    
-    # Asumimos que la columna 0 es Vigencia y la 1 es Tasa
     if 'Vigencia' not in df.columns:
         df = df.rename(columns={df.columns[0]: 'Vigencia', df.columns[1]: 'Tasa'})
 
+    # Conversión forzosa eliminando nulos
     df['Vigencia'] = pd.to_datetime(df['Vigencia'], errors='coerce')
     df['Tasa'] = pd.to_numeric(df['Tasa'], errors='coerce')
     
-    return df.dropna(subset=['Vigencia', 'Tasa']).sort_values('Vigencia').reset_index(drop=True)
+    df = df.dropna(subset=['Vigencia', 'Tasa'])
+    
+    # Ordenar por fecha
+    df = df.sort_values('Vigencia').reset_index(drop=True)
+    return df
+
 df = load_data()
 
 # Validar que el dataframe no esté vacío
 if df.empty:
-    st.error("No se pudieron cargar los datos correctamente desde el nuevo Google Sheet. Revisa los permisos o el formato de la hoja.")
+    st.error("No se pudieron cargar los datos correctamente. Revisa el formato de las columnas en la hoja.")
 else:
     # Filtros laterales con fechas seguras por defecto
     st.sidebar.header("Filtros")
@@ -43,7 +52,6 @@ else:
         max_value=max_date
     )
 
-    # Manejar si el usuario selecciona un rango o fecha única
     if isinstance(date_range, tuple) and len(date_range) == 2:
         start_date, end_date = date_range
     else:
