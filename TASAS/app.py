@@ -3,14 +3,15 @@ import pandas as pd
 from datetime import date
 
 # Configuración de la App
-st.set_page_config(page_title="Dashboard Dólar BCV", layout="wide")
-st.title("📊 Histórico de Tasas BCV")
+st.set_page_config(page_title="Dashboard Dólar BCV (2025-2026)", layout="wide")
+st.title("📊 Histórico de Tasas BCV (2025-2026)")
 
-# Función para cargar datos desde Google Sheets con blindaje contra NaT
+# Función para cargar datos desde el nuevo Google Sheet
 @st.cache_data(ttl=3600)
 def load_data():
-    sheet_id = "1_z2yK2pYwYVVhc0DzvgDfap6YEE28A2PP9MwikCRDlE"
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=CONSOLIDADO_HISTORICO"
+    # ID del nuevo Google Sheet provisto
+    sheet_id = "1mEfUxUCqwWFlDMWj0HgWgq0Xvd1sT273X4DIVN8OX84"
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv"
     
     df = pd.read_csv(url)
     
@@ -33,7 +34,7 @@ df = load_data()
 
 # Validar que el dataframe no esté vacío
 if df.empty:
-    st.error("No se pudieron cargar los datos correctamente desde Google Sheets. Revisa la hoja.")
+    st.error("No se pudieron cargar los datos correctamente desde el nuevo Google Sheet. Revisa los permisos o el formato de la hoja.")
 else:
     # Filtros laterales con fechas seguras por defecto
     st.sidebar.header("Filtros")
@@ -47,7 +48,7 @@ else:
         max_value=max_date
     )
 
-    # Manejar si el usuario selecciona una sola fecha o un rango
+    # Manejar si el usuario selecciona un rango o fecha única
     if isinstance(date_range, tuple) and len(date_range) == 2:
         start_date, end_date = date_range
     else:
@@ -66,7 +67,6 @@ else:
         st.dataframe(primer_dia[['Vigencia', 'Tasa']], use_container_width=True)
 
     if col2.button("Promedio Mensual"):
-        # Agrupación por mes para calcular el promedio
         promedios = filtered_df.copy()
         promedios['Mes'] = promedios['Vigencia'].dt.to_period('M').astype(str)
         prom_mensual = promedios.groupby('Mes')['Tasa'].mean().reset_index()
