@@ -9,27 +9,22 @@ st.title("📊 Histórico de Tasas BCV (2025-2026)")
 # Función para cargar datos desde el nuevo Google Sheet
 @st.cache_data(ttl=3600)
 def load_data():
-    # ID del nuevo Google Sheet provisto
-    sheet_id = "1mEfUxUCqwWFlDMWj0HgWgq0Xvd1sT273X4DIVN8OX84"
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv"
+    # PEGA AQUÍ LA URL QUE TE DIO "PUBLICAR EN LA WEB"
+    url = "TU_URL_DE_PUBLICACION_A_LA_WEB_AQUI"
     
     df = pd.read_csv(url)
     
     # Limpieza de nombres de columnas
     df.columns = [str(col).strip() for col in df.columns]
+    
+    # Asumimos que la columna 0 es Vigencia y la 1 es Tasa
     if 'Vigencia' not in df.columns:
         df = df.rename(columns={df.columns[0]: 'Vigencia', df.columns[1]: 'Tasa'})
 
-    # Conversión forzosa eliminando nulos
     df['Vigencia'] = pd.to_datetime(df['Vigencia'], errors='coerce')
     df['Tasa'] = pd.to_numeric(df['Tasa'], errors='coerce')
     
-    df = df.dropna(subset=['Vigencia', 'Tasa'])
-    
-    # Ordenar por fecha
-    df = df.sort_values('Vigencia').reset_index(drop=True)
-    return df
-
+    return df.dropna(subset=['Vigencia', 'Tasa']).sort_values('Vigencia').reset_index(drop=True)
 df = load_data()
 
 # Validar que el dataframe no esté vacío
