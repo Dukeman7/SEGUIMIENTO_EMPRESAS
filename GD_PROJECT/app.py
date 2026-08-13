@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
+# Configuración
 st.set_page_config(page_title="Gold Data - Centro de Control", layout="wide")
 SHEET_ID = "1YDV8UIyNldR9bLl71tgoI21cXvq4CIrkCSpMAmpOLvU"
 
@@ -10,49 +11,60 @@ def cargar_sheet(sheet_name):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     return pd.read_csv(url)
 
+# Leer hojas
 df_legal = cargar_sheet("LEGAL")
 df_econ = cargar_sheet("ECONOMICO")
 df_tec = cargar_sheet("TECNICO")
 df_diag = cargar_sheet("DIAGRAMACION")
 
-# --- LECTURA DE LOS TOTALES EN H4, H5, H6 ---
+# --- EXTRACCIÓN DE LOS 6 INDICADORES ---
+# Basado en tu estructura donde los valores están en E4:F6 (aprox)
+# Vamos a extraer los valores crudos de tu tabla resumen
 try:
-    # Supongamos que H4, H5 y H6 están en la columna H (índice 4 o 7 dependiendo de cómo se cargue el DF)
-    # Limpiamos el símbolo % y convertimos
-    aporte_recaudos_global = float(str(df_diag.iloc[3, 4]).replace('%','')) # H4 (Ej: 8%)
-    aporte_actividades_global = float(str(df_diag.iloc[4, 4]).replace('%','')) # H5 (Ej: 12%)
-    avance_global = float(str(df_diag.iloc[5, 4]).replace('%','')) # H6 (Ej: 20%)
+    # Definimos una función para limpiar y convertir a float
+    def get_val(r, c): return float(str(df_diag.iloc[r, c]).replace('%',''))
+
+    # Mapeo: [Tomo][Recaudos, Actividades]
+    # Legal (Fila 3), Económico (Fila 4), Técnico (Fila 5) - Ajusta según tu D1:H6
+    datos = {
+        "⚖️ Legal": [get_val(2, 1), get_val(2, 2)],
+        "💰 Económico": [get_val(3, 1), get_val(3, 2)],
+        "🛠️ Técnico": [get_val(4, 1), get_val(4, 2)]
+    }
+    avance_global = get_val(5, 4) # H6
 except:
-    aporte_recaudos_global, aporte_actividades_global, avance_global = 0.0, 0.0, 0.0
+    datos = {"⚖️ Legal": [0,0], "💰 Económico": [0,0], "🛠️ Técnico": [0,0]}
+    avance_global = 0.0
 
 # Sidebar
 st.sidebar.title("🎼 Panel de Control")
-vista = st.sidebar.radio("Seleccione la vista:", ["📊 Resumen Ejecutivo", "🛠️ Tomo Técnico", "⚖️ Tomo Legal", "💰 Tomo Económico", "📦 Diagramación"])
+vista = st.sidebar.radio("Seleccione la vista:", ["📊 Resumen Ejecutivo", "⚖️ Tomo Legal", "💰 Tomo Económico", "🛠️ Tomo Técnico", "📦 Diagramación"])
 
 if vista == "📊 Resumen Ejecutivo":
     st.title("🎼 Centro de Mando: Modificación de Habilitación")
     
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        # Galga Global (Se moverá al 20% si Legal está 100% listo)
+    col_a, col_b = st.columns([1, 2])
+    with col_a:
         fig = go.Figure(go.Indicator(mode="gauge+number", value=avance_global, 
                                      gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#00cc66"}},
                                      title={'text': "Avance Global (%)"}))
         st.plotly_chart(fig, use_container_width=True)
         
-    with col2:
-        st.subheader("📊 Aportes al Proyecto Total")
-        c1, c2 = st.columns(2)
+    with col_b:
+        st.subheader("📊 Aportes por Tomo al Proyecto")
         
-        # Mostramos el valor real (8% y 12%)
-        c1.metric("Aporte Recaudos (Max 40%)", f"{aporte_recaudos_global:.1f}%")
-        # Como el aporte máximo de recaudos global es 40%, normalizamos la barra dividiendo entre 40
-        st.progress(min(aporte_recaudos_global / 40.0, 1.0))
-        
-        c2.metric("Aporte Ejecución (Max 60%)", f"{aporte_actividades_global:.1f}%")
-        # Como el aporte máximo de ejecución global es 60%, normalizamos la barra dividiendo entre 60
-        st.progress(min(aporte_actividades_global / 60.0, 1.0))
+        # Generar las 3 columnas para los tomos
+        cols = st.columns(3)
+        for i, (nombre, valores) in enumerate(datos.items()):
+            with cols[i]:
+                st.markdown(f"### {nombre}")
+                st.metric("Recaudos", f"{valores[0]:.1f}%")
+                st.progress(min(valores[0] / 40.0, 1.0)) # Normalizado
+                st.metric("Actividades", f"{valores[1]:.1f}%")
+                st.progress(min(valores[1] / 60.0, 1.0)) # Normalizado
 
-elif vista == "⚖️ Tomo Legal":
-    st.subheader("⚖️ Detalle: Tomo Legal")
-    st.dataframe(df_legal, use_container_width=True)
+elif vista in ["⚖️ Tomo Legal", "💰 Tomo Económico", "🛠️ Tomo Técnico"]:
+    st.subheader(f"Detalle: {vista}")
+    if "Legal" in vista: st.dataframe(df_legal, use_container_width=True)
+    elif "Económico" in vista: st.dataframe(df_econ, use_container_width=True)
+    else: st.dataframe(df_tec, use_container_width=True)
