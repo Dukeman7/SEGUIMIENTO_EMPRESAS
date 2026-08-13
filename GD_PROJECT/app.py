@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-# Configuración
+# Configuración de la página
 st.set_page_config(page_title="Gold Data - Centro de Control", layout="wide")
+
 SHEET_ID = "1YDV8UIyNldR9bLl71tgoI21cXvq4CIrkCSpMAmpOLvU"
 
 @st.cache_data(ttl=30)
@@ -11,60 +12,79 @@ def cargar_sheet(sheet_name):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     return pd.read_csv(url)
 
-# Leer hojas
+# Cargar hojas
 df_legal = cargar_sheet("LEGAL")
 df_econ = cargar_sheet("ECONOMICO")
 df_tec = cargar_sheet("TECNICO")
 df_diag = cargar_sheet("DIAGRAMACION")
 
-# --- EXTRACCIÓN DE LOS 6 INDICADORES ---
-# Basado en tu estructura donde los valores están en E4:F6 (aprox)
-# Vamos a extraer los valores crudos de tu tabla resumen
+# --- EXTRACCIÓN DE DATOS ---
+# Usamos try-except para que no se rompa la app si el DF no está listo
 try:
-    # Definimos una función para limpiar y convertir a float
-    def get_val(r, c): return float(str(df_diag.iloc[r, c]).replace('%',''))
+    # Función segura para extraer valores numéricos
+    def get_val(r, c):
+        # r es índice de fila (0 basado), c es índice de columna (0 basado)
+        # .iloc[1, 4] sería Fila 2, Columna E
+        val = df_diag.iloc[r, c]
+        return float(val) if pd.notnull(val) else 0.0
 
-    # Mapeo: [Tomo][Recaudos, Actividades]
-    # Legal (Fila 3), Económico (Fila 4), Técnico (Fila 5) - Ajusta según tu D1:H6
+    # Mapeo según tus celdas:
+    # Legal: E2(1,4), E3(2,4) | Económico: F2(1,5), F3(2,5) | Técnico: G2(1,6), G3(2,6)
+    # Global: H6 (Índice fila 5, Columna 7)
     datos = {
-        "⚖️ Legal": [get_val(2, 1), get_val(2, 2)],
-        "💰 Económico": [get_val(3, 1), get_val(3, 2)],
-        "🛠️ Técnico": [get_val(4, 1), get_val(4, 2)]
+        "⚖️ Legal": [get_val(1, 4), get_val(2, 4)],
+        "💰 Económico": [get_val(1, 5), get_val(2, 5)],
+        "🛠️ Técnico": [get_val(1, 6), get_val(2, 6)]
     }
-    avance_global = get_val(5, 4) # H6
-except:
-    datos = {"⚖️ Legal": [0,0], "💰 Económico": [0,0], "🛠️ Técnico": [0,0]}
+    avance_global = get_val(5, 7) 
+except Exception as e:
+    st.error(f"Error cargando tabla de resumen: {e}")
+    datos = {"⚖️ Legal": [0.0, 0.0], "💰 Económico": [0.0, 0.0], "🛠️ Técnico": [0.0, 0.0]}
     avance_global = 0.0
 
-# Sidebar
+# --- INTERFAZ ---
 st.sidebar.title("🎼 Panel de Control")
-vista = st.sidebar.radio("Seleccione la vista:", ["📊 Resumen Ejecutivo", "⚖️ Tomo Legal", "💰 Tomo Económico", "🛠️ Tomo Técnico", "📦 Diagramación"])
+vista = st.sidebar.radio("Seleccione la vista:", 
+    ["📊 Resumen Ejecutivo", "⚖️ Tomo Legal", "💰 Tomo Económico", "🛠️ Tomo Técnico", "📦 Diagramación"])
 
 if vista == "📊 Resumen Ejecutivo":
     st.title("🎼 Centro de Mando: Modificación de Habilitación")
     
     col_a, col_b = st.columns([1, 2])
+    
     with col_a:
-        fig = go.Figure(go.Indicator(mode="gauge+number", value=avance_global, 
-                                     gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#00cc66"}},
-                                     title={'text': "Avance Global (%)"}))
+        st.subheader("🎯 Avance Global")
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number", 
+            value=avance_global,
+            number={'suffix': "%"},
+            gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#00cc66"}},
+            title={'text': "Proyecto Total"}
+        ))
         st.plotly_chart(fig, use_container_width=True)
         
     with col_b:
-        st.subheader("📊 Aportes por Tomo al Proyecto")
-        
-        # Generar las 3 columnas para los tomos
+        st.subheader("📊 Aportes por Tomo")
         cols = st.columns(3)
         for i, (nombre, valores) in enumerate(datos.items()):
             with cols[i]:
                 st.markdown(f"### {nombre}")
+                # Recaudos
                 st.metric("Recaudos", f"{valores[0]:.1f}%")
-                st.progress(min(valores[0] / 40.0, 1.0)) # Normalizado
+                st.progress(min(valores[0] / 100.0, 1.0))
+                # Actividades
                 st.metric("Actividades", f"{valores[1]:.1f}%")
-                st.progress(min(valores[1] / 60.0, 1.0)) # Normalizado
+                st.progress(min(valores[1] / 100.0, 1.0))
 
-elif vista in ["⚖️ Tomo Legal", "💰 Tomo Económico", "🛠️ Tomo Técnico"]:
-    st.subheader(f"Detalle: {vista}")
-    if "Legal" in vista: st.dataframe(df_legal, use_container_width=True)
-    elif "Económico" in vista: st.dataframe(df_econ, use_container_width=True)
-    else: st.dataframe(df_tec, use_container_width=True)
+elif vista == "⚖️ Tomo Legal":
+    st.subheader("⚖️ Detalle: Tomo Legal")
+    st.dataframe(df_legal, use_container_width=True)
+elif vista == "💰 Tomo Económico":
+    st.subheader("💰 Detalle: Tomo Económico")
+    st.dataframe(df_econ, use_container_width=True)
+elif vista == "🛠️ Tomo Técnico":
+    st.subheader("🛠️ Detalle: Tomo Técnico")
+    st.dataframe(df_tec, use_container_width=True)
+elif vista == "📦 Diagramación":
+    st.subheader("📦 Detalle: Resumen (D1:H6)")
+    st.dataframe(df_diag, use_container_width=True)
