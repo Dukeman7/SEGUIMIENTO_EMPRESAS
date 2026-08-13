@@ -18,13 +18,34 @@ def cargar_datos_sheet(sheet_name):
     except Exception as e:
         return pd.DataFrame()
 
+def calcular_progreso_hoja(df):
+    if df.empty:
+        return 0.0
+    
+    total_celdas = 0
+    celdas_marcadas = 0
+    
+    # Recorremos todas las celdas o columnas buscando valores booleanos o 'TRUE' / 'FALSE' / 1 / 0
+    for col in df.columns:
+        for val in df[col]:
+            if val in [True, 'TRUE', 'True', 1, '1', 1.0]:
+                celdas_marcadas += 1
+                total_celdas += 1
+            elif val in [False, 'FALSE', 'False', 0, '0', 0.0]:
+                total_celdas += 1
+                
+    if total_celdas == 0:
+        return 0.0
+        
+    return (celdas_marcadas / total_celdas) * 100.0
+
 # Cargar pestañas
 df_legal = cargar_datos_sheet("LEGAL")
 df_econ = cargar_datos_sheet("ECONOMICO")
 df_tec = cargar_datos_sheet("TECNICO")
 df_diag = cargar_datos_sheet("DIAGRAMACION")
 
-# Valores iniciales en 0.00%
+# Valores iniciales en 0.00% (puedes vincular luego la función calcular_progreso_hoja si lo deseas)
 rec_tec, av_tec = 0.0, 0.0
 rec_leg, av_leg = 0.0, 0.0
 rec_eco, av_eco = 0.0, 0.0
@@ -83,29 +104,7 @@ if vista == "📊 Resumen Ejecutivo":
         st.metric("Recaudos Económico", f"{rec_eco:.2f}%")
         st.progress(rec_eco / 100.0)
 
-    # Fila 2: Avances de Ejecución
-    def calcular_progreso_hoja(df):
-    if df.empty:
-        return 0.0
-    
-    total_celdas = 0
-    celdas_marcadas = 0
-    
-    # Recorremos todas las celdas o columnas buscando valores booleanos o 'TRUE' / 'FALSE' / 1 / 0
-    for col in df.columns:
-        for val in df[col]:
-            # Evaluamos si el valor representa una casilla marcada (True, 'TRUE', 'True', 1, 1.0)
-            if val in [True, 'TRUE', 'True', 1, '1', 1.0]:
-                celdas_marcadas += 1
-                total_celdas += 1
-            elif val in [False, 'FALSE', 'False', 0, '0', 0.0]:
-                total_celdas += 1
-                
-    if total_celdas == 0:
-        return 0.0
-        
-    return (celdas_marcadas / total_celdas) * 100.0
-    data_sections = st.markdown("---")
+    st.markdown("---")
     st.markdown("### ⚙️ AVANCES / EJECUCIÓN (Peso: 60% dentro de cada Tomo)")
     col4, col5, col6 = st.columns(3)
     with col4:
