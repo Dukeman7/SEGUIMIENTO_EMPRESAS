@@ -32,17 +32,18 @@ def get_val(r, c):
         return 0.0
 
 try:
-    # Mapeo según tus coordenadas:
-    # Legal: E2(1,4), E3(2,4) | Económico: F2(1,5), F3(2,5) | Técnico: G2(1,6), G3(2,6)
-    # Global: H6 (Fila 6 -> índice 5, Columna H -> índice 7)
+    # Mapeo corregido según tus celdas:
+    # Legal: Recaudos E4(3,1), Actividades E5(4,1)
+    # Económico: Recaudos F4(3,2), Actividades F5(4,2)
+    # Técnico: Recaudos G4(3,3), Actividades G5(4,3)
+    # Global: H6(5,4)
     datos = {
-        "⚖️ Legal": [get_val(1, 4), get_val(2, 4)],
-        "💰 Económico": [get_val(1, 5), get_val(2, 5)],
-        "🛠️ Técnico": [get_val(1, 6), get_val(2, 6)]
+        "⚖️ Legal": [get_val(3, 1), get_val(4, 1)],
+        "💰 Económico": [get_val(3, 2), get_val(4, 2)],
+        "🛠️ Técnico": [get_val(3, 3), get_val(4, 3)]
     }
-    avance_global = get_val(5, 7) 
+    avance_global = get_val(5, 4) 
 except Exception as e:
-    # Si algo falla aquí, los valores se quedan en 0 para no romper la app
     datos = {"⚖️ Legal": [0.0, 0.0], "💰 Económico": [0.0, 0.0], "🛠️ Técnico": [0.0, 0.0]}
     avance_global = 0.0
 
@@ -58,6 +59,7 @@ if vista == "📊 Resumen Ejecutivo":
     
     with col_a:
         st.subheader("🎯 Avance Global")
+        # Aquí el valor se pasa directo sin dividir, tal cual viene de H6
         fig = go.Figure(go.Indicator(
             mode="gauge+number", 
             value=avance_global,
@@ -73,22 +75,16 @@ if vista == "📊 Resumen Ejecutivo":
         for i, (nombre, valores) in enumerate(datos.items()):
             with cols[i]:
                 st.markdown(f"### {nombre}")
-                # Recaudos
                 st.metric("Recaudos", f"{valores[0]:.1f}%")
                 st.progress(min(valores[0] / 100.0, 1.0))
-                # Actividades
                 st.metric("Actividades", f"{valores[1]:.1f}%")
                 st.progress(min(valores[1] / 100.0, 1.0))
 
 elif vista == "⚖️ Tomo Legal":
-    st.subheader("⚖️ Detalle: Tomo Legal")
     st.dataframe(df_legal, use_container_width=True)
 elif vista == "💰 Tomo Económico":
-    st.subheader("💰 Detalle: Tomo Económico")
     st.dataframe(df_econ, use_container_width=True)
 elif vista == "🛠️ Tomo Técnico":
-    st.subheader("🛠️ Detalle: Tomo Técnico")
     st.dataframe(df_tec, use_container_width=True)
 elif vista == "📦 Diagramación":
-    st.subheader("📦 Detalle: Resumen (D1:H6)")
     st.dataframe(df_diag, use_container_width=True)
