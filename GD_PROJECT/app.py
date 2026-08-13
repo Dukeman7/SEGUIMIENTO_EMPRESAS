@@ -17,6 +17,11 @@ df_legal = cargar_sheet("LEGAL")
 df_econ = cargar_sheet("ECONOMICO")
 df_tec = cargar_sheet("TECNICO")
 df_diag = cargar_sheet("DIAGRAMACION")
+# --- BLOQUE DE DIAGNÓSTICO (Pon esto justo después de cargar la hoja) ---
+st.write("--- DEPURACIÓN DE TABLA ---")
+st.write("Columnas detectadas:", df_diag.columns.tolist())
+st.write("Vista previa de la tabla (primeras 8 filas):")
+st.dataframe(df_diag)
 
 # --- EXTRACCIÓN DE DATOS ---
 def get_val(r, c):
