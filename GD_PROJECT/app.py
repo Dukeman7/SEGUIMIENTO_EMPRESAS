@@ -8,63 +8,64 @@ st.set_page_config(page_title="Gold Data - Centro de Control", layout="wide")
 SHEET_ID = "1YDV8UIyNldR9bLl71tgoI21cXvq4CIrkCSpMAmpOLvU"
 
 @st.cache_data(ttl=30)
-def cargar_resumen():
-    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=DIAGRAMACION"
+def cargar_sheet(sheet_name):
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
     return pd.read_csv(url)
 
-def limpiar_valor(val):
-    """Convierte de forma segura celdas con %, texto o números a float"""
-    if pd.isna(val):
-        return 0.0
-    if isinstance(val, str):
-        val = val.replace('%', '').strip()
-        try:
-            return float(val)
-        except ValueError:
-            return 0.0
-    try:
-        return float(val)
-    except:
-        return 0.0
+# Cargar datos
+df_legal = cargar_sheet("LEGAL")
+df_econ = cargar_sheet("ECONOMICO")
+df_tec = cargar_sheet("TECNICO")
+df_diag = cargar_sheet("DIAGRAMACION")
 
-# Leer los datos maestros
-df_resumen = cargar_resumen()
-
-# --- EXTRACCIÓN SEGURA ---
+# Extraer valores de la tabla resumen en DIAGRAMACION (D1:H6)
+# Asumiendo que el rango D1:H6 se carga en df_diag
 try:
-    # Ajusta los índices según la posición exacta de tus celdas en D1:H6
-    raw_rec = df_resumen.iloc[2, 4] if len(df_resumen) > 2 else 0.0
-    raw_act = df_resumen.iloc[3, 4] if len(df_resumen) > 3 else 0.0
-    raw_glob = df_resumen.iloc[4, 4] if len(df_resumen) > 4 else 0.0
+    # Ajusta los índices según la estructura real de tu hoja DIAGRAMACION
+    # H4, H5, H6 son las filas 3, 4, 5 y la columna 4 (índice 4)
+    rec_total = float(str(df_diag.iloc[3, 4]).replace('%','')) 
+    act_total = float(str(df_diag.iloc[4, 4]).replace('%',''))
+    avance_global = float(str(df_diag.iloc[5, 4]).replace('%',''))
+except:
+    rec_total, act_total, avance_global = 0.0, 0.0, 0.0
+
+# Sidebar
+st.sidebar.title("🎼 Panel de Control")
+vista = st.sidebar.radio("Seleccione la vista:", 
+    ["📊 Resumen Ejecutivo", "🛠️ Tomo Técnico", "⚖️ Tomo Legal", "💰 Tomo Económico", "📦 Diagramación"])
+
+# Vistas
+if vista == "📊 Resumen Ejecutivo":
+    st.title("🎼 Centro de Mando: Modificación de Habilitación")
     
-    progreso_recaudos_total = limpiar_valor(raw_rec)
-    progreso_actividades_total = limpiar_valor(raw_act)
-    avance_global = limpiar_valor(raw_glob)
-except Exception as e:
-    st.error(f"Error leyendo la tabla maestra: {e}")
-    progreso_recaudos_total, progreso_actividades_total, avance_global = 0.0, 0.0, 0.0
-
-# --- INTERFAZ ---
-st.title("🎼 Centro de Control: Modificación de Habilitación")
-
-col_a, col_b = st.columns([1, 2])
-
-with col_a:
-    st.subheader("🎯 Avance Global")
-    fig = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = avance_global,
-        gauge = {'axis': {'range': [0, 100]}, 'bar': {'color': "#00cc66"}},
-        title = {'text': "Avance Total (%)"}
-    ))
-    st.plotly_chart(fig, use_container_width=True)
-
-with col_b:
-    st.subheader("📊 Resumen por Nivel")
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1, 2])
     with col1:
-        st.metric("Total Recaudos (40%)", f"{progreso_recaudos_total:.2f}%")
-        st.progress(min(max(progreso_recaudos_total/100, 0.0), 1.0))
+        # Galga Global
+        fig = go.Figure(go.Indicator(mode="gauge+number", value=avance_global, 
+                                     gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#00cc66"}},
+                                     title={'text': "Avance Global (%)"}))
+        st.plotly_chart(fig, use_container_width=True)
+        
     with col2:
-        st.metric("Total Ejecución (60%)", f"{progreso_actividades_total:.2f}%")
-        st.progress(min(max(progreso_actividades_total/100, 0.0), 1.0))
+        st.subheader("📊 Indicadores de Gestión")
+        c1, c2 = st.columns(2)
+        c1.metric("Recaudos Totales (40% Peso)", f"{rec_total:.1f}%")
+        c2.metric("Actividades Totales (60% Peso)", f"{act_total:.1f}%")
+        st.progress(rec_total/100)
+        st.progress(act_total/100)
+
+elif vista == "🛠️ Tomo Técnico":
+    st.subheader("🛠️ Detalle: Tomo Técnico")
+    st.dataframe(df_tec, use_container_width=True)
+
+elif vista == "⚖️ Tomo Legal":
+    st.subheader("⚖️ Detalle: Tomo Legal")
+    st.dataframe(df_legal, use_container_width=True)
+
+elif vista == "💰 Tomo Económico":
+    st.subheader("💰 Detalle: Tomo Económico")
+    st.dataframe(df_econ, use_container_width=True)
+
+elif vista == "📦 Diagramación":
+    st.subheader("📦 Detalle: Diagramación y Cierre")
+    st.dataframe(df_diag, use_container_width=True)
