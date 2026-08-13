@@ -19,18 +19,22 @@ df_tec = cargar_sheet("TECNICO")
 df_diag = cargar_sheet("DIAGRAMACION")
 
 # --- EXTRACCIÓN DE DATOS ---
-# Usamos try-except para que no se rompa la app si el DF no está listo
-try:
-    # Función segura para extraer valores numéricos
-    def get_val(r, c):
-        # r es índice de fila (0 basado), c es índice de columna (0 basado)
-        # .iloc[1, 4] sería Fila 2, Columna E
+def get_val(r, c):
+    """Extrae el valor, reemplaza comas por puntos y convierte a float."""
+    try:
         val = df_diag.iloc[r, c]
-        return float(val) if pd.notnull(val) else 0.0
+        if pd.isnull(val):
+            return 0.0
+        # Convertir a string, reemplazar coma por punto, limpiar espacios
+        val_str = str(val).replace(',', '.').strip()
+        return float(val_str)
+    except:
+        return 0.0
 
-    # Mapeo según tus celdas:
+try:
+    # Mapeo según tus coordenadas:
     # Legal: E2(1,4), E3(2,4) | Económico: F2(1,5), F3(2,5) | Técnico: G2(1,6), G3(2,6)
-    # Global: H6 (Índice fila 5, Columna 7)
+    # Global: H6 (Fila 6 -> índice 5, Columna H -> índice 7)
     datos = {
         "⚖️ Legal": [get_val(1, 4), get_val(2, 4)],
         "💰 Económico": [get_val(1, 5), get_val(2, 5)],
@@ -38,7 +42,7 @@ try:
     }
     avance_global = get_val(5, 7) 
 except Exception as e:
-    st.error(f"Error cargando tabla de resumen: {e}")
+    # Si algo falla aquí, los valores se quedan en 0 para no romper la app
     datos = {"⚖️ Legal": [0.0, 0.0], "💰 Económico": [0.0, 0.0], "🛠️ Técnico": [0.0, 0.0]}
     avance_global = 0.0
 
