@@ -84,6 +84,27 @@ if vista == "📊 Resumen Ejecutivo":
         st.progress(rec_eco / 100.0)
 
     # Fila 2: Avances de Ejecución
+    def calcular_progreso_hoja(df):
+    if df.empty:
+        return 0.0
+    
+    total_celdas = 0
+    celdas_marcadas = 0
+    
+    # Recorremos todas las celdas o columnas buscando valores booleanos o 'TRUE' / 'FALSE' / 1 / 0
+    for col in df.columns:
+        for val in df[col]:
+            # Evaluamos si el valor representa una casilla marcada (True, 'TRUE', 'True', 1, 1.0)
+            if val in [True, 'TRUE', 'True', 1, '1', 1.0]:
+                celdas_marcadas += 1
+                total_celdas += 1
+            elif val in [False, 'FALSE', 'False', 0, '0', 0.0]:
+                total_celdas += 1
+                
+    if total_celdas == 0:
+        return 0.0
+        
+    return (celdas_marcadas / total_celdas) * 100.0
     data_sections = st.markdown("---")
     st.markdown("### ⚙️ AVANCES / EJECUCIÓN (Peso: 60% dentro de cada Tomo)")
     col4, col5, col6 = st.columns(3)
