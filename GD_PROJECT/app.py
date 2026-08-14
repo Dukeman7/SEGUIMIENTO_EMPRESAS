@@ -55,7 +55,7 @@ vista = st.sidebar.radio("Seleccione la vista:",
     ["📊 Resumen Ejecutivo", "⚖️ Tomo Legal", "💰 Tomo Económico", "🛠️ Tomo Técnico", "🎛️ Control (Tabla)"])
 
 if vista == "📊 Resumen Ejecutivo":
-    st.title("🎼 Centro de Mando: Modificación de Habilitación")
+    st.title("Proyecto Modificación de Habilitación GOLD DATA")
     
     col_a, col_b = st.columns([1, 2])
     
