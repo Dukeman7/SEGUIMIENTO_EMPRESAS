@@ -11,9 +11,22 @@ SHEET_NAME = "TAREAS_D"
 def cargar_tareas():
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
     df = pd.read_csv(url)
-    # A=Fecha, B=Estado, C=Descripción, D=Observaciones
+    
+    # Nos quedamos estrictamente con las primeras 4 columnas (A, B, C, D)
+    df = df.iloc[:, :4]
+    
+    # Asignamos los nombres de forma segura
     df.columns = ['Fecha', 'Estado', 'Descripcion', 'Observaciones']
-    df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True)
+    
+    # Limpiamos filas vacías por si acaso
+    df = df.dropna(subset=['Fecha'])
+    
+    # Convertimos Fecha a datetime de forma segura
+    df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
+    
+    # Convertimos Estado a booleano real (True/False)
+    df['Estado'] = df['Estado'].astype(bool)
+    
     return df
 
 df = cargar_tareas()
