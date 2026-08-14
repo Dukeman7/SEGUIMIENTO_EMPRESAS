@@ -24,27 +24,26 @@ def cargar_tareas():
     # Convertimos Fecha a datetime de forma segura
     df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
     
-    # Convertimos Estado a booleano real (True/False)
-    df['Estado'] = df['Estado'].astype(bool)
-    
     return df
 
 df = cargar_tareas()
-hoy = pd.Timestamp(datetime.now().date())
 
 # --- CÁLCULOS MEJORADOS ---
 # Convertimos todo a formato fecha sin hora para comparar solo días
 df['Fecha_Solo'] = df['Fecha'].dt.normalize()
 hoy = pd.Timestamp(datetime.now().date())
 
-# Aseguramos que el estado sea realmente booleano
-# Si en tu sheet escribes "TRUE", pandas a veces lo lee como texto. 
-# Esto fuerza la conversión:
-df['Estado'] = df['Estado'].apply(lambda x: str(x).lower() == 'true')
+# Aseguramos que el estado sea realmente booleano de forma robusta
+df['Estado'] = df['Estado'].apply(lambda x: str(x).strip().lower() in ['true', '1', 't', 'yes', 'si'])
+
+# Función para calcular el porcentaje de cumplimiento de forma segura
+def calcular_stats(df_filtro):
+    if len(df_filtro) == 0: 
+        return 0.0
+    return float((df_filtro['Estado'].sum() / len(df_filtro)) * 100)
 
 # Filtros ajustados
 hoy_df = df[df['Fecha_Solo'] == hoy]
-# Incluimos desde el pasado hasta 7 días en el futuro para que nada se pierda
 semana_df = df[(df['Fecha_Solo'] <= hoy + timedelta(days=7))]
 quincena_df = df[(df['Fecha_Solo'] <= hoy + timedelta(days=15))]
 
@@ -65,9 +64,8 @@ for i, (nombre, data) in enumerate(stats):
         ))
         st.plotly_chart(fig, use_container_width=True)
 
-# Radar de Tareas Pendientes (AHORA SI TE LAS MOSTRARÁ)
+# Radar de Tareas Pendientes
 st.subheader("🚨 Radar de Tareas (Pendientes)")
-# Filtramos todas las que sean False y tengan fecha
 pendientes = df[(df['Estado'] == False) & (df['Fecha_Solo'] >= hoy - timedelta(days=2))].sort_values('Fecha')
 if not pendientes.empty:
     st.table(pendientes[['Fecha', 'Descripcion', 'Observaciones']])
