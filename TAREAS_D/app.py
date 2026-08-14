@@ -32,15 +32,21 @@ def cargar_tareas():
 df = cargar_tareas()
 hoy = pd.Timestamp(datetime.now().date())
 
-# --- CÁLCULOS ---
-def calcular_stats(df_filtro):
-    if len(df_filtro) == 0: return 0
-    return (df_filtro['Estado'].sum() / len(df_filtro)) * 100
+# --- CÁLCULOS MEJORADOS ---
+# Convertimos todo a formato fecha sin hora para comparar solo días
+df['Fecha_Solo'] = df['Fecha'].dt.normalize()
+hoy = pd.Timestamp(datetime.now().date())
 
-# Filtros
-hoy_df = df[df['Fecha'] == hoy]
-semana_df = df[(df['Fecha'] >= hoy) & (df['Fecha'] <= hoy + timedelta(days=7))]
-quincena_df = df[(df['Fecha'] >= hoy) & (df['Fecha'] <= hoy + timedelta(days=15))]
+# Aseguramos que el estado sea realmente booleano
+# Si en tu sheet escribes "TRUE", pandas a veces lo lee como texto. 
+# Esto fuerza la conversión:
+df['Estado'] = df['Estado'].apply(lambda x: str(x).lower() == 'true')
+
+# Filtros ajustados
+hoy_df = df[df['Fecha_Solo'] == hoy]
+# Incluimos desde el pasado hasta 7 días en el futuro para que nada se pierda
+semana_df = df[(df['Fecha_Solo'] <= hoy + timedelta(days=7))]
+quincena_df = df[(df['Fecha_Solo'] <= hoy + timedelta(days=15))]
 
 # --- DASHBOARD ---
 st.title("🎛️ Centro de Control de Productividad")
@@ -59,13 +65,14 @@ for i, (nombre, data) in enumerate(stats):
         ))
         st.plotly_chart(fig, use_container_width=True)
 
-# Radar de Tareas Pendientes
-st.subheader("🚨 Radar de Tareas (Pendientes Próximos 7 días)")
-pendientes = semana_df[semana_df['Estado'] == False]
+# Radar de Tareas Pendientes (AHORA SI TE LAS MOSTRARÁ)
+st.subheader("🚨 Radar de Tareas (Pendientes)")
+# Filtramos todas las que sean False y tengan fecha
+pendientes = df[(df['Estado'] == False) & (df['Fecha_Solo'] >= hoy - timedelta(days=2))].sort_values('Fecha')
 if not pendientes.empty:
     st.table(pendientes[['Fecha', 'Descripcion', 'Observaciones']])
 else:
-    st.success("¡Radar despejado! No hay tareas pendientes esta semana.")
+    st.success("¡Radar despejado!")
 
 # Lista Completa
 with st.expander("📋 Ver todas las tareas"):
