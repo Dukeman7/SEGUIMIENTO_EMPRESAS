@@ -9,13 +9,21 @@ SHEET_NAME = "REPORTES_MENSUALES"
 
 @st.cache_data(ttl=15)
 def cargar_control_mensual():
-    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
-    df = pd.read_csv(url)
-    # Limpieza básica de datos
-    df = df[['Empresa', 'Reporte', 'Remitieron', 'Enviado', 'Entregado']].dropna(subset=['Empresa'])
-    for col in ['Remitieron', 'Enviado', 'Entregado']:
-        df[col] = df[col].apply(lambda x: str(x).strip().lower() in ['true', '1', 't', 'yes', 'si', 'verdadero'])
-    return df
+    url = f"https://docs.google.com/spreadsheets/d/1GYEizLwSybQ9-ezFD1gPnSytQyaNF2DWiJrwKcR68V4/gviz/tq?tqx=out:csv&sheet=REPORTES_MES"
+    try:
+        df = pd.read_csv(url)
+        # Limpieza de datos
+        df = df.iloc[:, :5]
+        df.columns = ['Empresa', 'Reporte', 'Remitieron', 'Enviado', 'Entregado']
+        df = df.dropna(subset=['Empresa'])
+        
+        for col in ['Remitieron', 'Enviado', 'Entregado']:
+            df[col] = df[col].apply(lambda x: str(x).strip().lower() in ['true', '1', 't', 'yes', 'si', 'verdadero'])
+        return df
+    except Exception as e:
+        st.error(f"⚠️ Error al conectar con Google Sheets: {e}")
+        st.info("Asegúrate de que la hoja esté compartida como 'Cualquier persona con el enlace' y que el nombre de la pestaña sea correcto.")
+        return pd.DataFrame()
 
 st.title("🚨 Control Cierre Mensual CONATEL")
 st.caption("Seguimiento de entregas - Primeros 5 Días Hábiles del Mes")
