@@ -4,7 +4,7 @@ from datetime import datetime
 
 st.set_page_config(page_title="Control Mensual CONATEL", page_icon="📅", layout="centered")
 
-SHEET_ID = "TU_GOOGLE_SHEET_ID_AQUI"
+SHEET_ID = "https://docs.google.com/spreadsheets/d/1GYEizLwSybQ9-ezFD1gPnSytQyaNF2DWiJrwKcR68V4/edit?gid=966836474#gid=966836474"
 SHEET_NAME = "REPORTES_MENSUALES"
 
 @st.cache_data(ttl=15)
