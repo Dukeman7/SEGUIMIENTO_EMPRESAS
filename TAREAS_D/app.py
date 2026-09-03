@@ -1,77 +1,108 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="Control de Productividad", page_icon="🎛️", layout="wide")
+
 SHEET_ID = "1GYEizLwSybQ9-ezFD1gPnSytQyaNF2DWiJrwKcR68V4"
 SHEET_NAME = "TAREAS_D"
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)  # Bajamos el tiempo de caché a 30 seg para mayor dinamismo
 def cargar_tareas():
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
     df = pd.read_csv(url)
     
-    # Nos quedamos estrictamente con las primeras 4 columnas (A, B, C, D)
+    # Nos quedamos con las primeras 4 columnas (A, B, C, D)
     df = df.iloc[:, :4]
-    
-    # Asignamos los nombres de forma segura
     df.columns = ['Fecha', 'Estado', 'Descripcion', 'Observaciones']
     
-    # Limpiamos filas vacías por si acaso
+    # Limpieza
     df = df.dropna(subset=['Fecha'])
-    
-    # Convertimos Fecha a datetime de forma segura
     df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
+    
+    # Estado Booleano Robusto
+    df['Estado'] = df['Estado'].apply(lambda x: str(x).strip().lower() in ['true', '1', 't', 'yes', 'si', 'verdadero'])
     
     return df
 
 df = cargar_tareas()
 
-# --- CÁLCULOS MEJORADOS ---
-# Convertimos todo a formato fecha sin hora para comparar solo días
+# --- DATES Y TIMESTAMPS ---
 df['Fecha_Solo'] = df['Fecha'].dt.normalize()
 hoy = pd.Timestamp(datetime.now().date())
+inicio_mes = hoy.replace(day=1)
 
-# Aseguramos que el estado sea realmente booleano de forma robusta
-df['Estado'] = df['Estado'].apply(lambda x: str(x).strip().lower() in ['true', '1', 't', 'yes', 'si'])
+# --- CÁLCULO DE LAS 5 CIFRAS CLAVE ---
+# 1. Cumplidas Hoy
+cumplidas_hoy = len(df[(df['Fecha_Solo'] == hoy) & (df['Estado'] == True)])
 
-# Función para calcular el porcentaje de cumplimiento de forma segura
-def calcular_stats(df_filtro):
-    if len(df_filtro) == 0: 
-        return 0.0
-    return float((df_filtro['Estado'].sum() / len(df_filtro)) * 100)
+# 2. Acumuladas Cumplidas en el Mes
+cumplidas_mes = len(df[(df['Fecha_Solo'] >= inicio_mes) & (df['Fecha_Solo'] <= hoy) & (df['Estado'] == True)])
 
-# Filtros ajustados
-hoy_df = df[df['Fecha_Solo'] == hoy]
-semana_df = df[(df['Fecha_Solo'] <= hoy + timedelta(days=7))]
-quincena_df = df[(df['Fecha_Solo'] <= hoy + timedelta(days=15))]
+# 3. Acumuladas Cumplidas Histórico (Total)
+cumplidas_historico = len(df[df['Estado'] == True])
 
-# --- DASHBOARD ---
-st.title("🎛️ Centro de Control de Productividad")
+# 4. Atrasadas (Programadas para antes de hoy y NO cumplidas) -> Alerta Roja
+atrasadas = len(df[(df['Fecha_Solo'] < hoy) & (df['Estado'] == False)])
 
-# Galgas (Gauges)
-cols = st.columns(3)
-stats = [("Hoy", hoy_df), ("Semana", semana_df), ("Quincena", quincena_df)]
+# 5. Pendientes Futuras (Programadas para HOY o DÍAS FUTUROS y NO cumplidas)
+pendientes_futuras = len(df[(df['Fecha_Solo'] >= hoy) & (df['Estado'] == False)])
 
-for i, (nombre, data) in enumerate(stats):
-    pct = calcular_stats(data)
-    with cols[i]:
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number", value=pct,
-            title={'text': nombre},
-            gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#00cc66"}}
-        ))
-        st.plotly_chart(fig, use_container_width=True)
+# --- INTERFAZ DEL DASHBOARD ---
+st.title("🎛️ Centro de Control de Productividad - Búnker")
+st.caption(f"Última sincronización: {datetime.now().strftime('%H:%M:%S')} | Hoja: TAREAS_D")
 
-# Radar de Tareas Pendientes
-st.subheader("🚨 Radar de Tareas (Pendientes)")
-pendientes = df[(df['Estado'] == False) & (df['Fecha_Solo'] >= hoy - timedelta(days=2))].sort_values('Fecha')
-if not pendientes.empty:
-    st.table(pendientes[['Fecha', 'Descripcion', 'Observaciones']])
-else:
-    st.success("¡Radar despejado!")
+st.write("---")
 
-# Lista Completa
-with st.expander("📋 Ver todas las tareas"):
-    st.dataframe(df, use_container_width=True)
+# DASHBOARD DE 5 CIFRAS CLAVE
+c1, c2, c3, c4, c5 = st.columns(5)
+
+with c1:
+    st.metric(label="✅ Cumplidas Hoy", value=cumplidas_hoy)
+
+with c2:
+    st.metric(label="📅 Cumplidas este Mes", value=cumplidas_mes)
+
+with c3:
+    st.metric(label="🏆 Total Histórico", value=cumplidas_historico)
+
+with c4:
+    # Si hay atrasadas, se resalta en la métrica
+    st.metric(label="🚨 Atrasadas (Vencidas)", value=atrasadas, delta=-atrasadas if atrasadas > 0 else 0, delta_color="inverse")
+
+with c5:
+    st.metric(label="⏳ Pendientes (Por vencer)", value=pendientes_futuras)
+
+st.write("---")
+
+# SECCIÓN DE ACCIÓN OPERATIVA
+col_izq, col_der = st.columns(2)
+
+with col_izq:
+    st.subheader("🚨 Radar de Tareas Atrasadas")
+    df_atrasadas = df[(df['Fecha_Solo'] < hoy) & (df['Estado'] == False)].sort_values('Fecha')
+    
+    if not df_atrasadas.empty:
+        vista_atrasadas = df_atrasadas.copy()
+        vista_atrasadas['Fecha'] = vista_atrasadas['Fecha'].dt.strftime('%d/%m/%Y')
+        st.dataframe(vista_atrasadas[['Fecha', 'Descripcion', 'Observaciones']], use_container_width=True, hide_index=True)
+    else:
+        st.success("¡Sin tareas atrasadas! Cero pendientes del pasado.")
+
+with col_der:
+    st.subheader("📌 Tareas Programadas para Hoy")
+    df_hoy = df[df['Fecha_Solo'] == hoy].sort_values('Estado')
+    
+    if not df_hoy.empty:
+        vista_hoy = df_hoy.copy()
+        vista_hoy['Estado_Icono'] = vista_hoy['Estado'].apply(lambda x: "✅ Listo" if x else "⏳ Pendiente")
+        st.dataframe(vista_hoy[['Estado_Icono', 'Descripcion', 'Observaciones']], use_container_width=True, hide_index=True)
+    else:
+        st.info("No hay tareas específicas programadas para el día de hoy.")
+
+# HISTORIAL COMPLETO
+with st.expander("📋 Ver registro general de la hoja"):
+    df_mostrar = df.copy()
+    df_mostrar['Fecha'] = df_mostrar['Fecha'].dt.strftime('%d/%m/%Y')
+    st.dataframe(df_mostrar[['Fecha', 'Estado', 'Descripcion', 'Observaciones']], use_container_width=True, hide_index=True)
